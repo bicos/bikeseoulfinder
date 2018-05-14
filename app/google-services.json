@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "35242813760",
+    "firebase_url": "https://bikeseoulfinder.firebaseio.com",
+    "project_id": "bikeseoulfinder",
+    "storage_bucket": "bikeseoulfinder.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35242813760:android:f4aba7273221550a",
+        "android_client_info": {
+          "package_name": "com.kakao.bikeseoulfinder"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "35242813760-9nvo3hksvjg679hs12ku65a4hvlm1n1k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAl_-ouoCrVj8JdjCCPKE8wHk9Ke5qBZsk"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
