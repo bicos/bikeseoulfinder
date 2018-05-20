@@ -2,9 +2,11 @@ package com.kakao.bikeseoulfinder.ui.main
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 import android.os.Bundle
 import android.support.v4.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,13 +20,19 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import com.kakao.bikeseoulfinder.R
+import io.reactivex.processors.PublishProcessor
 import pub.devrel.easypermissions.EasyPermissions
 
 
 private const val REQ_GET_CURRENT_LOCATION = 1000
 
 private const val DEFAULT_ZOOM = 15f
+
+private const val LAT_1KM : Double = 0.008983
+
+private const val LON_1KM : Double = 0.015060
 
 class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionCallbacks, GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
 
@@ -45,7 +53,9 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
+        context?.let {
+            viewModel = ViewModelProviders.of(this, MainViewModelFactory(it)).get(MainViewModel::class.java)
+        }
         (childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(this)
 
         activity?.let {
@@ -76,6 +86,19 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     override fun onMapReady(map: GoogleMap?) {
         this.map = map
+        this.map?.let {
+            it.setOnCameraIdleListener({
+                val northeast = it.projection.visibleRegion.latLngBounds.northeast
+                val southwest = it.projection.visibleRegion.latLngBounds.southwest
+
+                viewModel.dao?.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
+                        ?.observe(this@MainFragment, Observer {
+                            it?.forEach {
+                                it@map?.addMarker(MarkerOptions().title(it.name).position(LatLng(it.latitude, it.longitude)))
+                            }
+                        })
+            })
+        }
 
         val perm = Manifest.permission.ACCESS_FINE_LOCATION
 
