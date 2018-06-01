@@ -5,11 +5,11 @@ import android.arch.lifecycle.ViewModelProviders
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
-import android.widget.Toast
+import com.kakao.bikeseoulfinder.network.ApiManager
+import com.kakao.bikeseoulfinder.network.BikeStationResponse
 import com.kakao.bikeseoulfinder.ui.main.MainFragment
 import com.kakao.bikeseoulfinder.ui.main.MainViewModel
 import com.kakao.bikeseoulfinder.ui.main.MainViewModelFactory
-import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 
 class MainActivity : AppCompatActivity() {
@@ -33,9 +33,18 @@ class MainActivity : AppCompatActivity() {
             if (it == 0) {
                 viewModel.loadJsonBikeListFile()
                         .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
                         .subscribe({
-                            Toast.makeText(applicationContext, "load complete", Toast.LENGTH_SHORT).show()
+                            Log.e(MainActivity::class.java.simpleName, it.toString())
+                        }, {
+                            Log.e(MainActivity::class.java.simpleName, it.message, it)
+                        })
+            } else {
+                viewModel.dao?.getAll()
+                ApiManager.instance.getRealTimeBikeStations()
+                        .subscribeOn(Schedulers.io())
+                        .subscribe ({
+                            t: BikeStationResponse? ->
+
                         }, {
                             Log.e(MainActivity::class.java.simpleName, it.message, it)
                         })
