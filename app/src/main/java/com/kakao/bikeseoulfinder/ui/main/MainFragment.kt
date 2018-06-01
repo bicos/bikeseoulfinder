@@ -4,9 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.support.v4.app.Fragment
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,19 +21,17 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.VisibleRegion
+import com.google.maps.android.MarkerManager
+import com.google.maps.android.clustering.ClusterManager
 import com.kakao.bikeseoulfinder.R
-import io.reactivex.processors.PublishProcessor
+import kotlinx.android.synthetic.main.main_fragment.*
 import pub.devrel.easypermissions.EasyPermissions
 
 
 private const val REQ_GET_CURRENT_LOCATION = 1000
 
 private const val DEFAULT_ZOOM = 15f
-
-private const val LAT_1KM : Double = 0.008983
-
-private const val LON_1KM : Double = 0.015060
 
 class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionCallbacks, GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
 
@@ -45,6 +44,8 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     private var map: GoogleMap? = null
 
     private var googleApiClient: GoogleApiClient? = null
+
+    private var clusterManager: ClusterManager<BikeStationItem>? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
@@ -70,6 +71,14 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                         connect()
                     }
         }
+
+        btn_search_bike_station.setOnClickListener {
+            map?.let {
+                it.clear()
+                clusterManager?.clearItems()
+                getNearByStationAndShowMarkers(it.projection.visibleRegion)
+            }
+        }
     }
 
     override fun onConnectionFailed(p0: ConnectionResult) {
@@ -87,17 +96,18 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     override fun onMapReady(map: GoogleMap?) {
         this.map = map
         this.map?.let {
-            it.setOnCameraIdleListener({
-                val northeast = it.projection.visibleRegion.latLngBounds.northeast
-                val southwest = it.projection.visibleRegion.latLngBounds.southwest
+            clusterManager = ClusterManager(context, it, MarkerManager(it))
+            clusterManager?.setOnClusterItemInfoWindowClickListener { bikeStationItem ->
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
+                startActivity(intent)
+            }
 
-                viewModel.dao?.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
-                        ?.observe(this@MainFragment, Observer {
-                            it?.forEach {
-                                it@map?.addMarker(MarkerOptions().title(it.name).position(LatLng(it.latitude, it.longitude)))
-                            }
-                        })
-            })
+            it.setOnCameraIdleListener (clusterManager)
+            it.setOnMarkerClickListener(clusterManager)
+            it.setOnInfoWindowClickListener(clusterManager)
+
+            getNearByStationAndShowMarkers(it.projection.visibleRegion)
         }
 
         val perm = Manifest.permission.ACCESS_FINE_LOCATION
@@ -111,6 +121,19 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                         Manifest.permission.ACCESS_FINE_LOCATION)
             }
         }
+    }
+
+    private fun getNearByStationAndShowMarkers(region: VisibleRegion) {
+        val northeast = region.latLngBounds.northeast
+        val southwest = region.latLngBounds.southwest
+
+        viewModel.dao?.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
+                ?.observe(this@MainFragment, Observer {
+                    it?.forEach { bikeStation ->
+                        clusterManager?.addItem(BikeStationItem(bikeStation))
+                    }
+                    clusterManager?.cluster()
+                })
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">따릉이를 부탁해</string>
+    <string name="msg_refresh">새로고침</string>
 </resources>
