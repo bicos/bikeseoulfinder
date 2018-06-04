@@ -55,11 +55,9 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         .toList()
-                        .observeOn(AndroidSchedulers.mainThread())
                         .subscribe { _: MutableList<Unit>? ->
-                            val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss", Locale.KOREA)
-                            val currentDate = sdf.format(Date())
-                            Toast.makeText(applicationContext, "데이터가 업데이트 되었습니다. $currentDate", Toast.LENGTH_SHORT).show()
+                            val date = Date()
+                            MainApplication.pref.setUpdateTime(date.time)
                         }
             }
         })

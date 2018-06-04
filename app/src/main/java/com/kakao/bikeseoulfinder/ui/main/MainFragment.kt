@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.support.v4.app.Fragment
@@ -24,9 +25,13 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.VisibleRegion
 import com.google.maps.android.MarkerManager
 import com.google.maps.android.clustering.ClusterManager
+import com.kakao.bikeseoulfinder.AppPrefs.Companion.PREF_UPDATE_TIME
+import com.kakao.bikeseoulfinder.MainApplication
 import com.kakao.bikeseoulfinder.R
 import kotlinx.android.synthetic.main.main_fragment.*
 import pub.devrel.easypermissions.EasyPermissions
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 private const val REQ_GET_CURRENT_LOCATION = 1000
@@ -46,6 +51,14 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     private var googleApiClient: GoogleApiClient? = null
 
     private var clusterManager: ClusterManager<BikeStationItem>? = null
+
+    private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+        if (key == PREF_UPDATE_TIME) {
+            val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss", Locale.KOREA)
+            val currentDate = sdf.format(Date(MainApplication.pref.getUpdateTime()))
+            Toast.makeText(context, "데이터가 업데이트 되었습니다. $currentDate", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
@@ -79,6 +92,13 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                 getNearByStationAndShowMarkers(it.projection.visibleRegion)
             }
         }
+
+        MainApplication.pref.getPref().registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    override fun onDestroy() {
+        MainApplication.pref.getPref().unregisterOnSharedPreferenceChangeListener(listener)
+        super.onDestroy()
     }
 
     override fun onConnectionFailed(p0: ConnectionResult) {
