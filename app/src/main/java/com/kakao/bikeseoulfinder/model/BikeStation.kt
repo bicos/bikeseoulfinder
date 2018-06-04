@@ -13,4 +13,5 @@ data class BikeStation(
         @SerializedName("longitude") val longitude: Double,
         @SerializedName("latitude") val latitude: Double,
         @SerializedName("content_nm") val name: String,
-        @SerializedName("addr_gu") val addressGu: String)
+        @SerializedName("addr_gu") val addressGu: String,
+        @SerializedName("parkingBikeTotCnt") var parkingBikeTotCnt: Int = 0)

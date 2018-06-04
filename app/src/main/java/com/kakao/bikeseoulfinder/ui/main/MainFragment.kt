@@ -127,8 +127,8 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         val northeast = region.latLngBounds.northeast
         val southwest = region.latLngBounds.southwest
 
-        viewModel.dao?.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
-                ?.observe(this@MainFragment, Observer {
+        viewModel.dao.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
+                .observe(this@MainFragment, Observer {
                     it?.forEach { bikeStation ->
                         clusterManager?.addItem(BikeStationItem(bikeStation))
                     }
