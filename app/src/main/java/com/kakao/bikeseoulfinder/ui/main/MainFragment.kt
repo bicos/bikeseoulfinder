@@ -46,17 +46,18 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     private lateinit var viewModel: MainViewModel
 
-    private var map: GoogleMap? = null
+    private lateinit var map: GoogleMap
 
     private var googleApiClient: GoogleApiClient? = null
 
     private var clusterManager: ClusterManager<BikeStationItem>? = null
 
-    private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+    private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == PREF_UPDATE_TIME) {
             val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss", Locale.KOREA)
             val currentDate = sdf.format(Date(MainApplication.pref.getUpdateTime()))
             Toast.makeText(context, "데이터가 업데이트 되었습니다. $currentDate", Toast.LENGTH_SHORT).show()
+            getNearByStationAndShowMarkers(map.projection.visibleRegion)
         }
     }
 
@@ -86,11 +87,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         }
 
         btn_search_bike_station.setOnClickListener {
-            map?.let {
-                it.clear()
-                clusterManager?.clearItems()
-                getNearByStationAndShowMarkers(it.projection.visibleRegion)
-            }
+            getNearByStationAndShowMarkers(map.projection.visibleRegion)
         }
 
         MainApplication.pref.getPref().registerOnSharedPreferenceChangeListener(listener)
@@ -114,26 +111,27 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     }
 
     override fun onMapReady(map: GoogleMap?) {
-        this.map = map
-        this.map?.let {
-            clusterManager = ClusterManager(context, it, MarkerManager(it))
-            clusterManager?.setOnClusterItemInfoWindowClickListener { bikeStationItem ->
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
-                startActivity(intent)
-            }
-
-            it.setOnCameraIdleListener (clusterManager)
-            it.setOnMarkerClickListener(clusterManager)
-            it.setOnInfoWindowClickListener(clusterManager)
-
-            getNearByStationAndShowMarkers(it.projection.visibleRegion)
+        if (map == null) {
+            Toast.makeText(context, "오류가 발생하였습니다. 잠시 후 다시 시도하여 주세요.", Toast.LENGTH_SHORT).show()
+            activity?.finish()
+            return
         }
 
-        val perm = Manifest.permission.ACCESS_FINE_LOCATION
+        this.map = map
+
+        clusterManager = ClusterManager(context, map, MarkerManager(map))
+        clusterManager?.setOnClusterItemInfoWindowClickListener { bikeStationItem ->
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
+            startActivity(intent)
+        }
+
+        map.setOnCameraIdleListener (clusterManager)
+        map.setOnMarkerClickListener(clusterManager)
+        map.setOnInfoWindowClickListener(clusterManager)
 
         context?.let {
-            if (EasyPermissions.hasPermissions(it, perm)) {
+            if (EasyPermissions.hasPermissions(it, Manifest.permission.ACCESS_FINE_LOCATION)) {
                 setMyLocationUi(true)
                 moveCurrentLocation()
             } else {
@@ -141,19 +139,6 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                         Manifest.permission.ACCESS_FINE_LOCATION)
             }
         }
-    }
-
-    private fun getNearByStationAndShowMarkers(region: VisibleRegion) {
-        val northeast = region.latLngBounds.northeast
-        val southwest = region.latLngBounds.southwest
-
-        viewModel.dao.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
-                .observe(this@MainFragment, Observer {
-                    it?.forEach { bikeStation ->
-                        clusterManager?.addItem(BikeStationItem(bikeStation))
-                    }
-                    clusterManager?.cluster()
-                })
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -171,17 +156,35 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     @SuppressLint("MissingPermission")
     private fun setMyLocationUi(enableMyLocation: Boolean) {
-        map?.isMyLocationEnabled = enableMyLocation
-        map?.uiSettings?.isMyLocationButtonEnabled = enableMyLocation
+        map.isMyLocationEnabled = enableMyLocation
+        map.uiSettings?.isMyLocationButtonEnabled = enableMyLocation
     }
 
     @SuppressLint("MissingPermission")
     private fun moveCurrentLocation() {
         context?.let {
-            LocationServices.getFusedLocationProviderClient(it).lastLocation.addOnSuccessListener {
-                map?.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), DEFAULT_ZOOM))
+            LocationServices.getFusedLocationProviderClient(it).lastLocation.addOnSuccessListener { location ->
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it@location.latitude, it@location.longitude), DEFAULT_ZOOM))
+                getNearByStationAndShowMarkers(map.projection.visibleRegion)
             }
         }
+    }
+
+    private fun getNearByStationAndShowMarkers(region: VisibleRegion) {
+        map.clear()
+        clusterManager?.clearItems()
+
+        val northeast = region.latLngBounds.northeast
+        val southwest = region.latLngBounds.southwest
+
+        viewModel.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
+                .observe(this@MainFragment, Observer {
+                    viewModel.stationList?.removeObservers(this)
+                    it?.forEach { bikeStation ->
+                        clusterManager?.addItem(BikeStationItem(bikeStation))
+                    }
+                    clusterManager?.cluster()
+                })
     }
 
 }

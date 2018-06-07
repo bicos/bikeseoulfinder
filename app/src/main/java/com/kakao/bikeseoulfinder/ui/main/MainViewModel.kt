@@ -2,9 +2,7 @@ package com.kakao.bikeseoulfinder.ui.main
 
 import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.LifecycleOwner
 import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.LiveDataReactiveStreams
 import android.content.Context
 import com.google.gson.Gson
 import com.kakao.bikeseoulfinder.MainApplication
@@ -12,7 +10,6 @@ import com.kakao.bikeseoulfinder.R
 import com.kakao.bikeseoulfinder.model.BikeStation
 import com.kakao.bikeseoulfinder.model.BikeStationList
 import io.reactivex.Observable
-import org.reactivestreams.Publisher
 
 class MainViewModel(context: Context) : AndroidViewModel(context.applicationContext as Application) {
 
@@ -20,6 +17,14 @@ class MainViewModel(context: Context) : AndroidViewModel(context.applicationCont
 
     val count : LiveData<Int> by lazy {
         dao.getCount()
+    }
+
+    var stationList : LiveData<List<BikeStation>>? = null
+
+    fun getNearByStations(fromLat: Double, toLat: Double, fromLon: Double, toLon: Double) : LiveData<List<BikeStation>> {
+        return dao.getNearByStations(fromLat, toLat, fromLon, toLon).apply {
+            stationList = this
+        }
     }
 
     fun loadJsonBikeListFile(): Observable<Unit> {

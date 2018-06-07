@@ -7,7 +7,7 @@ import com.kakao.bikeseoulfinder.model.BikeStation
 class BikeStationItem(private val station : BikeStation) : ClusterItem {
 
     override fun getSnippet(): String {
-        return "${station.newAddress} ${station.parkingBikeTotCnt}대 남음"
+        return "${station.parkingBikeTotCnt}대 남음"
     }
 
     override fun getTitle(): String {
