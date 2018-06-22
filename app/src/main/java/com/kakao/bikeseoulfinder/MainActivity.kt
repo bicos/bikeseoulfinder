@@ -6,14 +6,11 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.text.TextUtils
 import android.util.Log
-import android.widget.Toast
 import com.kakao.bikeseoulfinder.network.ApiManager
 import com.kakao.bikeseoulfinder.ui.main.MainFragment
 import com.kakao.bikeseoulfinder.ui.main.MainViewModel
 import com.kakao.bikeseoulfinder.ui.main.MainViewModelFactory
-import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
-import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
