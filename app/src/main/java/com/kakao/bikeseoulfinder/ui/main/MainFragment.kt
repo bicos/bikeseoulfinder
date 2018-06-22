@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -15,6 +16,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.location.LocationAvailability
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.places.Places
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -23,6 +25,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.VisibleRegion
+import com.google.android.gms.tasks.OnSuccessListener
 import com.google.maps.android.MarkerManager
 import com.google.maps.android.clustering.ClusterManager
 import com.kakao.bikeseoulfinder.AppPrefs.Companion.PREF_UPDATE_TIME
@@ -37,6 +40,8 @@ import java.util.*
 private const val REQ_GET_CURRENT_LOCATION = 1000
 
 private const val DEFAULT_ZOOM = 15f
+
+private val DEFAULT_LAT_LON = LatLng(37.5640907, 126.99794029999998)
 
 class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionCallbacks, GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
 
@@ -126,17 +131,18 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
             startActivity(intent)
         }
 
-        map.setOnCameraIdleListener (clusterManager)
+        map.setOnCameraIdleListener(clusterManager)
         map.setOnMarkerClickListener(clusterManager)
         map.setOnInfoWindowClickListener(clusterManager)
 
-        context?.let {
-            if (EasyPermissions.hasPermissions(it, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                setMyLocationUi(true)
-                moveCurrentLocation()
-            } else {
+        context?.let { context ->
+            if (!EasyPermissions.hasPermissions(context, Manifest.permission.ACCESS_FINE_LOCATION)) {
                 EasyPermissions.requestPermissions(this, "현재 위치를 가져오기 위해 위치 접근 권한이 필요합니다.", REQ_GET_CURRENT_LOCATION,
                         Manifest.permission.ACCESS_FINE_LOCATION)
+            } else {
+                isLocationAvailable(context, OnSuccessListener {
+                    handleLocationAvailable(it.isLocationAvailable)
+                })
             }
         }
     }
@@ -146,12 +152,20 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     }
 
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
-        setMyLocationUi(true)
-        moveCurrentLocation()
+        context?.let {
+            isLocationAvailable(it, OnSuccessListener {
+                handleLocationAvailable(it.isLocationAvailable)
+            })
+        }
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
         setMyLocationUi(false)
+    }
+
+    private fun handleLocationAvailable(isLocationAvailable: Boolean) {
+        setMyLocationUi(isLocationAvailable)
+        moveCurrentLocation()
     }
 
     @SuppressLint("MissingPermission")
@@ -161,11 +175,21 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     }
 
     @SuppressLint("MissingPermission")
+    private fun isLocationAvailable(context: Context, callback: OnSuccessListener<LocationAvailability>) {
+        LocationServices.getFusedLocationProviderClient(context).locationAvailability.addOnSuccessListener(callback)
+    }
+
+    @SuppressLint("MissingPermission")
     private fun moveCurrentLocation() {
-        context?.let {
-            LocationServices.getFusedLocationProviderClient(it).lastLocation.addOnSuccessListener { location ->
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it@location.latitude, it@location.longitude), DEFAULT_ZOOM))
-                getNearByStationAndShowMarkers(map.projection.visibleRegion)
+        context?.let { context ->
+            LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM))
+                } else {
+                    Toast.makeText(context, "현재 위치를 가져올 수 없습니다. 기본 위치로 설정합니다.", Toast.LENGTH_SHORT).show()
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LAT_LON, DEFAULT_ZOOM))
+                }
+                this.getNearByStationAndShowMarkers(map.projection.visibleRegion)
             }
         }
     }
@@ -186,5 +210,4 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                     clusterManager?.cluster()
                 })
     }
-
 }
