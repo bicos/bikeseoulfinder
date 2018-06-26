@@ -1,9 +1,5 @@
 package com.kakao.bikeseoulfinder.network
 
-data class BikeStationResponse(val realtimeList: List<SimpleBikeStation>) {
+import com.kakao.bikeseoulfinder.model.BikeStation
 
-    data class SimpleBikeStation(val stationName: String,
-                      val stationLatitude: Double,
-                      val stationLongitude: Double,
-                      val parkingBikeTotCnt: Int)
-}
+data class BikeStationResponse(val realtimeList: List<BikeStation>)

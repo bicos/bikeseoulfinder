@@ -1,12 +1,13 @@
 package com.kakao.bikeseoulfinder.network
 
-import com.kakao.bikeseoulfinder.model.BikeStation
 import io.reactivex.Observable
 import io.reactivex.schedulers.Schedulers
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.GET
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
+import retrofit2.http.POST
 
 interface ApiManager {
 
@@ -22,6 +23,7 @@ interface ApiManager {
         }
     }
 
-    @GET("app/station/getStationRealtimeStatus.do")
-    fun getRealTimeBikeStations() : Observable<BikeStationResponse>
+    @POST("app/station/getStationRealtimeStatus.do")
+    @FormUrlEncoded
+    fun getRealTimeBikeStations(@Field("stationGrpSeq") stationGrpSeq: Int = 10): Observable<BikeStationResponse>
 }

@@ -4,17 +4,17 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.clustering.ClusterItem
 import com.kakao.bikeseoulfinder.model.BikeStation
 
-class BikeStationItem(private val station : BikeStation) : ClusterItem {
+data class BikeStationItem(private val station : BikeStation) : ClusterItem {
 
     override fun getSnippet(): String {
         return "${station.parkingBikeTotCnt}대 남음"
     }
 
     override fun getTitle(): String {
-        return station.name
+        return station.stationName
     }
 
     override fun getPosition(): LatLng {
-        return LatLng(station.latitude, station.longitude)
+        return LatLng(station.stationLatitude, station.stationLongitude)
     }
 }

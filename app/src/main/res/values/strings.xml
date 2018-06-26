@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">따릉이를 부탁해</string>
     <string name="msg_refresh">새로고침</string>
+    <string name="service_not_available">서비스가 원활하지 않습니다.</string>
+    <string name="invalid_lat_long_used">올바르지 않은 위경도값입니다.</string>
+    <string name="no_address_found">주소를 찾을 수 없습니다.</string>
+    <string name="address_found">주소를 성공적으로 찾았습니다.</string>
 </resources>

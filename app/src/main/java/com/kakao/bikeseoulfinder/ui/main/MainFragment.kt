@@ -9,7 +9,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.ResultReceiver
 import android.support.v4.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,9 +31,11 @@ import com.google.android.gms.maps.model.VisibleRegion
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.maps.android.MarkerManager
 import com.google.maps.android.clustering.ClusterManager
+import com.kakao.bikeseoulfinder.*
 import com.kakao.bikeseoulfinder.AppPrefs.Companion.PREF_UPDATE_TIME
-import com.kakao.bikeseoulfinder.MainApplication
-import com.kakao.bikeseoulfinder.R
+import com.kakao.bikeseoulfinder.network.ApiManager
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.main_fragment.*
 import pub.devrel.easypermissions.EasyPermissions
 import java.text.SimpleDateFormat
@@ -57,6 +62,8 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     private var clusterManager: ClusterManager<BikeStationItem>? = null
 
+    private lateinit var resultReceiver: AddressResultReceiver
+
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == PREF_UPDATE_TIME) {
             val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss", Locale.KOREA)
@@ -65,6 +72,8 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
             getNearByStationAndShowMarkers(map.projection.visibleRegion)
         }
     }
+
+    val compositeDisposable : CompositeDisposable = CompositeDisposable()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
@@ -76,6 +85,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         context?.let {
             viewModel = ViewModelProviders.of(this, MainViewModelFactory(it)).get(MainViewModel::class.java)
         }
+        resultReceiver = AddressResultReceiver(Handler())
         (childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(this)
 
         activity?.let {
@@ -98,8 +108,14 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         MainApplication.pref.getPref().registerOnSharedPreferenceChangeListener(listener)
     }
 
+    override fun onPause() {
+        compositeDisposable.clear()
+        super.onPause()
+    }
+
     override fun onDestroy() {
         MainApplication.pref.getPref().unregisterOnSharedPreferenceChangeListener(listener)
+        compositeDisposable.dispose()
         super.onDestroy()
     }
 
@@ -134,6 +150,10 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         map.setOnCameraIdleListener(clusterManager)
         map.setOnMarkerClickListener(clusterManager)
         map.setOnInfoWindowClickListener(clusterManager)
+
+        viewModel.observeAll().observe(this, Observer {
+            updateUiFromVisibleRegion()
+        })
 
         context?.let { context ->
             if (!EasyPermissions.hasPermissions(context, Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -195,19 +215,53 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     }
 
     private fun getNearByStationAndShowMarkers(region: VisibleRegion) {
-        map.clear()
-        clusterManager?.clearItems()
+        val intent = Intent(context, FetchAddressIntentService::class.java).apply {
+            putExtra(Constants.RECEIVER, resultReceiver)
+            putExtra(Constants.LOCATION_DATA_EXTRA, region.latLngBounds.center)
+        }
+        context?.startService(intent)
+    }
 
-        val northeast = region.latLngBounds.northeast
-        val southwest = region.latLngBounds.southwest
+    private fun updateUiFromVisibleRegion() {
+        val northeast = map.projection.visibleRegion.latLngBounds.northeast
+        val southwest = map.projection.visibleRegion.latLngBounds.southwest
 
-        viewModel.getNearByStations(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
+        viewModel.observeNearByStation(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
                 .observe(this@MainFragment, Observer {
                     viewModel.stationList?.removeObservers(this)
+
                     it?.forEach { bikeStation ->
-                        clusterManager?.addItem(BikeStationItem(bikeStation))
+                        val item = BikeStationItem(bikeStation)
+                        clusterManager?.removeItem(item)
+                        clusterManager?.addItem(item)
                     }
                     clusterManager?.cluster()
                 })
     }
+
+    internal inner class AddressResultReceiver(handler: Handler) : ResultReceiver(handler) {
+
+        override fun onReceiveResult(resultCode: Int, resultData: Bundle?) {
+            if (compositeDisposable.isDisposed) return
+
+            val addressOutput = resultData?.getString(Constants.RESULT_DATA_KEY) ?: ""
+            val grpReq = Utils.getFrpSeq(addressOutput)
+
+            val disposable = ApiManager.instance.getRealTimeBikeStations(grpReq)
+                    .map { viewModel.dao.insertAll(it.realtimeList) }
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe({
+                        // do nothing
+                    }, {
+                        Log.i("getRealTimeBikeStations", it.message, it)
+                        context?.let {
+                            Toast.makeText(context, "네트워크가 원활하지 않아 그 전 위치정보를 불러옵니다.", Toast.LENGTH_SHORT).show()
+                            updateUiFromVisibleRegion()
+                        }
+                    })
+
+            compositeDisposable.add(disposable)
+        }
+    }
+
 }
