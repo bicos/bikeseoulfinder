@@ -31,8 +31,11 @@ import com.google.android.gms.maps.model.VisibleRegion
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.maps.android.MarkerManager
 import com.google.maps.android.clustering.ClusterManager
+import com.google.maps.android.clustering.view.DefaultClusterRenderer
+import com.google.maps.android.data.Renderer
 import com.kakao.bikeseoulfinder.*
 import com.kakao.bikeseoulfinder.AppPrefs.Companion.PREF_UPDATE_TIME
+import com.kakao.bikeseoulfinder.model.BikeStation
 import com.kakao.bikeseoulfinder.network.ApiManager
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -141,6 +144,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         this.map = map
 
         clusterManager = ClusterManager(context, map, MarkerManager(map))
+        clusterManager?.renderer = BikeStationRenderer(context, map, clusterManager)
         clusterManager?.setOnClusterItemInfoWindowClickListener { bikeStationItem ->
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
@@ -252,16 +256,25 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({
                         // do nothing
-                    }, {
-                        Log.i("getRealTimeBikeStations", it.message, it)
+                    }) {
+                        if (BuildConfig.DEBUG) {
+                            Log.i("getRealTimeBikeStations", it.message, it)
+                        }
+
                         context?.let {
                             Toast.makeText(context, "네트워크가 원활하지 않아 그 전 위치정보를 불러옵니다.", Toast.LENGTH_SHORT).show()
                             updateUiFromVisibleRegion()
                         }
-                    })
+                    }
 
             compositeDisposable.add(disposable)
         }
     }
 
+
+    class BikeStationRenderer(context: Context?, map: GoogleMap?, clusterManager: ClusterManager<BikeStationItem>?) : DefaultClusterRenderer<BikeStationItem>(context, map, clusterManager) {
+
+
+
+    }
 }

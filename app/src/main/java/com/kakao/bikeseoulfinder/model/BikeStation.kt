@@ -8,4 +8,5 @@ data class BikeStation(
         val stationLatitude: Double,
         val stationLongitude: Double,
         val rackTotCnt: Int,
-        val parkingBikeTotCnt: Int)
+        val parkingBikeTotCnt: Int,
+        val isFavorite: Boolean)
