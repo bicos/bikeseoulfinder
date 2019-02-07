@@ -1,6 +1,6 @@
 package com.kakao.bikeseoulfinder.model
 
-import android.arch.persistence.room.Entity
+import androidx.room.Entity
 
 @Entity(tableName = "BikeStations", primaryKeys = ["stationLatitude", "stationLongitude"])
 data class BikeStation(
@@ -9,4 +9,4 @@ data class BikeStation(
         val stationLongitude: Double,
         val rackTotCnt: Int,
         val parkingBikeTotCnt: Int,
-        val isFavorite: Boolean)
+        var isFavorite: Boolean)

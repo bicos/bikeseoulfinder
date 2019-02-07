@@ -1,11 +1,10 @@
 package com.kakao.bikeseoulfinder.ui.favorite
 
-import android.annotation.SuppressLint
-import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import com.kakao.bikeseoulfinder.model.BikeStation
 
 class FavoriteListAdapter : RecyclerView.Adapter<FavoriteListAdapter.FavoriteViewHolder>() {
@@ -30,7 +29,6 @@ class FavoriteListAdapter : RecyclerView.Adapter<FavoriteListAdapter.FavoriteVie
         var text1: TextView = itemView.findViewById(android.R.id.text1)
         var text2: TextView = itemView.findViewById(android.R.id.text2)
 
-        @SuppressLint("SetTextI18n")
         fun setData(bikeStation: BikeStation) {
             text1.text = bikeStation.stationName
             text2.text = "${bikeStation.rackTotCnt}대 남음"

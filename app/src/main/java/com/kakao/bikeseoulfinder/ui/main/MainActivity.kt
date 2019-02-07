@@ -1,10 +1,10 @@
 package com.kakao.bikeseoulfinder.ui.main
 
-import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
 import android.widget.ArrayAdapter
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProviders
 import com.kakao.bikeseoulfinder.R
 import com.kakao.bikeseoulfinder.ui.favorite.FavoriteStationListActivity
 import kotlinx.android.synthetic.main.main_activity.*
@@ -24,9 +24,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val settingArray = resources.getStringArray(R.array.setting_array)
-        val adapter = ArrayAdapter<String>(this, R.layout.drawer_item, settingArray)
-        left_drawer.adapter = adapter
-        left_drawer.setOnItemClickListener { parent, view, position, id ->
+        left_drawer.adapter = ArrayAdapter<String>(this, R.layout.drawer_item, settingArray)
+        left_drawer.setOnItemClickListener { _, _, position, _ ->
             if (position == 0) {
                 startActivity(Intent(this@MainActivity, FavoriteStationListActivity::class.java))
             }

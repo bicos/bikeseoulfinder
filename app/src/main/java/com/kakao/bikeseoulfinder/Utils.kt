@@ -1,5 +1,10 @@
 package com.kakao.bikeseoulfinder
 
+import android.R
+import android.app.Activity
+import android.widget.SimpleAdapter
+import androidx.appcompat.app.AlertDialog
+
 class Utils {
     companion object {
         fun getFrpSeq(addr: String): Int {
@@ -31,6 +36,21 @@ class Utils {
                 addr.contains("강북구") -> return 34
                 else -> return 10
             }
+        }
+
+        fun showListDialog(activity: Activity?, title: String = "", list : List<String>, action: (String) -> Unit) {
+            activity?: return
+
+            val mapList = list.map { s -> mapOf(Pair("name", s)) }
+
+            val adapter = SimpleAdapter(activity, mapList, R.layout.simple_list_item_1,
+                    arrayOf("name"), intArrayOf(R.id.text1))
+
+            AlertDialog.Builder(activity)
+                    .setTitle(title)
+                    .setAdapter(adapter) { _, which ->
+                        action.invoke(list[which])
+                    }.show()
         }
     }
 }

@@ -1,8 +1,8 @@
 package com.kakao.bikeseoulfinder.ui.favorite
 
 import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.LiveData
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
 import android.content.Context
 import com.kakao.bikeseoulfinder.MainApplication
 import com.kakao.bikeseoulfinder.model.BikeStation

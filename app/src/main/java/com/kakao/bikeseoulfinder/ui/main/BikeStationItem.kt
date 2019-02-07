@@ -4,7 +4,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.clustering.ClusterItem
 import com.kakao.bikeseoulfinder.model.BikeStation
 
-data class BikeStationItem(private val station : BikeStation) : ClusterItem {
+data class BikeStationItem(private val station: BikeStation) : ClusterItem {
 
     override fun getSnippet(): String {
         return "${station.parkingBikeTotCnt}대 남음"
@@ -16,5 +16,13 @@ data class BikeStationItem(private val station : BikeStation) : ClusterItem {
 
     override fun getPosition(): LatLng {
         return LatLng(station.stationLatitude, station.stationLongitude)
+    }
+
+    fun isFavorite(): Boolean {
+        return station.isFavorite
+    }
+
+    fun getStation(): BikeStation {
+        return station
     }
 }

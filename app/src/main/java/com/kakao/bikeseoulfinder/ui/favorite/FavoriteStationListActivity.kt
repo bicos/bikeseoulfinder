@@ -1,9 +1,10 @@
 package com.kakao.bikeseoulfinder.ui.favorite
 
-import android.arch.lifecycle.Observer
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.LinearLayoutManager
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.kakao.bikeseoulfinder.R
 import kotlinx.android.synthetic.main.favorite_station_list_activity.*
 
@@ -17,7 +18,7 @@ class FavoriteStationListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.favorite_station_list_activity)
 
-        list_favorite_station.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        list_favorite_station.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
         list_favorite_station.adapter = adapter
 
         viewModel = FavoriteStationViewModel(this)

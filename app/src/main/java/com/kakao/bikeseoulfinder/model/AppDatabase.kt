@@ -1,7 +1,7 @@
 package com.kakao.bikeseoulfinder.model
 
-import android.arch.persistence.room.Database
-import android.arch.persistence.room.RoomDatabase
+import androidx.room.Database
+import androidx.room.RoomDatabase
 
 @Database(entities = [BikeStation::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {

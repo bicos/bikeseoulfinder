@@ -1,11 +1,11 @@
 package com.kakao.bikeseoulfinder.model
 
-import android.arch.lifecycle.LiveData
-import android.arch.persistence.room.Dao
-import android.arch.persistence.room.Insert
-import android.arch.persistence.room.OnConflictStrategy.REPLACE
-import android.arch.persistence.room.Query
-import android.arch.persistence.room.Update
+import androidx.lifecycle.LiveData
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy.REPLACE
+import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface BikeStationDao {
@@ -19,8 +19,11 @@ interface BikeStationDao {
     @Update(onConflict = REPLACE)
     fun updateAll(bikeStation: List<BikeStation?>)
 
-    @Query("UPDATE BikeStations SET parkingBikeTotCnt = :parkingBikeTotalCount WHERE stationLatitude = :stationLatitude AND stationLongitude = :stationLongitude")
-    fun updateParkingBikeTotCnt(stationLatitude: Double, stationLongitude: Double, parkingBikeTotalCount: Int)
+    @Update(onConflict = REPLACE)
+    fun update(bikeStation: BikeStation)
+
+//    @Query("UPDATE BikeStations SET parkingBikeTotCnt = :parkingBikeTotalCount WHERE stationLatitude = :stationLatitude AND stationLongitude = :stationLongitude")
+//    fun updateParkingBikeTotCnt(stationLatitude: Double, stationLongitude: Double, parkingBikeTotalCount: Int)
 
     @Query("SELECT count(*) FROM BikeStations")
     fun getCount(): LiveData<Int>

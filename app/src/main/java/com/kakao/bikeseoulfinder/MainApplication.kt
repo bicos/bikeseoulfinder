@@ -1,7 +1,7 @@
 package com.kakao.bikeseoulfinder
 
 import android.app.Application
-import android.arch.persistence.room.Room
+import androidx.room.Room
 import com.kakao.bikeseoulfinder.model.AppDatabase
 
 class MainApplication : Application() {

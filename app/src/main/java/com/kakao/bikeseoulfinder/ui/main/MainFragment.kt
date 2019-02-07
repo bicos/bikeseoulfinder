@@ -2,21 +2,24 @@ package com.kakao.bikeseoulfinder.ui.main
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.ResultReceiver
-import android.support.v4.app.Fragment
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationAvailability
@@ -26,16 +29,13 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.VisibleRegion
+import com.google.android.gms.maps.model.*
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.maps.android.MarkerManager
 import com.google.maps.android.clustering.ClusterManager
 import com.google.maps.android.clustering.view.DefaultClusterRenderer
-import com.google.maps.android.data.Renderer
 import com.kakao.bikeseoulfinder.*
 import com.kakao.bikeseoulfinder.AppPrefs.Companion.PREF_UPDATE_TIME
-import com.kakao.bikeseoulfinder.model.BikeStation
 import com.kakao.bikeseoulfinder.network.ApiManager
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -76,7 +76,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         }
     }
 
-    val compositeDisposable : CompositeDisposable = CompositeDisposable()
+    val compositeDisposable: CompositeDisposable = CompositeDisposable()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View {
@@ -146,9 +146,23 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         clusterManager = ClusterManager(context, map, MarkerManager(map))
         clusterManager?.renderer = BikeStationRenderer(context, map, clusterManager)
         clusterManager?.setOnClusterItemInfoWindowClickListener { bikeStationItem ->
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
-            startActivity(intent)
+            Utils.showListDialog(activity, "",
+                    listOf("위치 상세 보기", if (bikeStationItem.isFavorite()) "즐겨찾기 해제" else "즐겨찾기 저장"),
+                    action = {
+                        when(it) {
+                            "위치 상세 보기" -> {
+                                val intent = Intent(Intent.ACTION_VIEW)
+                                intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
+                                startActivity(intent)
+                            }
+                            "즐겨찾기 저장" -> {
+                                viewModel.changeFavoriteStateBikeStation(bikeStationItem.getStation(), true)
+                            }
+                            "즐겨찾기 해제" -> {
+                                viewModel.changeFavoriteStateBikeStation(bikeStationItem.getStation(), false)
+                            }
+                        }
+                    })
         }
 
         map.setOnCameraIdleListener(clusterManager)
@@ -272,9 +286,23 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     }
 
 
-    class BikeStationRenderer(context: Context?, map: GoogleMap?, clusterManager: ClusterManager<BikeStationItem>?) : DefaultClusterRenderer<BikeStationItem>(context, map, clusterManager) {
+    class BikeStationRenderer(val context: Context?, map: GoogleMap?, clusterManager: ClusterManager<BikeStationItem>?)
+        : DefaultClusterRenderer<BikeStationItem>(context, map, clusterManager) {
 
+        override fun onBeforeClusterItemRendered(item: BikeStationItem, markerOptions: MarkerOptions) {
+            markerOptions.icon(if (item.isFavorite())
+                bitmapDescriptorFromVector(context, R.drawable.ic_favorite)
+            else
+                bitmapDescriptorFromVector(context, R.drawable.ic_default))
+        }
 
-
+        private fun bitmapDescriptorFromVector(context: Context?, vectorId: Int) : BitmapDescriptor? {
+            val vectorDrawable = ContextCompat.getDrawable(context ?: return null, vectorId) ?: return null
+            vectorDrawable.setBounds(0,0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
+            val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            vectorDrawable.draw(canvas)
+            return BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
     }
 }
