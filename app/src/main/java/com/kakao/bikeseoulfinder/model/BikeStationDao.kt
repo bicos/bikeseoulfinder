@@ -3,6 +3,7 @@ package com.kakao.bikeseoulfinder.model
 import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy.IGNORE
 import androidx.room.OnConflictStrategy.REPLACE
 import androidx.room.Query
 import androidx.room.Update
@@ -13,7 +14,7 @@ interface BikeStationDao {
     @Query("SELECT * FROM BikeStations")
     fun getAll(): LiveData<List<BikeStation>>
 
-    @Insert(onConflict = REPLACE)
+    @Insert(onConflict = IGNORE)
     fun insertAll(bikeStation: List<BikeStation>)
 
     @Update(onConflict = REPLACE)
@@ -22,8 +23,8 @@ interface BikeStationDao {
     @Update(onConflict = REPLACE)
     fun update(bikeStation: BikeStation)
 
-//    @Query("UPDATE BikeStations SET parkingBikeTotCnt = :parkingBikeTotalCount WHERE stationLatitude = :stationLatitude AND stationLongitude = :stationLongitude")
-//    fun updateParkingBikeTotCnt(stationLatitude: Double, stationLongitude: Double, parkingBikeTotalCount: Int)
+    @Query("UPDATE BikeStations SET parkingBikeTotCnt = :parkingBikeTotalCount, rackTotCnt = :rackTotCount WHERE stationLatitude = :stationLatitude AND stationLongitude = :stationLongitude")
+    fun updateParkingBikeCnt(stationLatitude: Double, stationLongitude: Double, parkingBikeTotalCount: Int, rackTotCount: Int)
 
     @Query("SELECT count(*) FROM BikeStations")
     fun getCount(): LiveData<Int>

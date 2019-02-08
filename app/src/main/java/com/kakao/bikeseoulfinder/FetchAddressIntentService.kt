@@ -29,7 +29,7 @@ class FetchAddressIntentService : IntentService("FetchAddressIntentService") {
     override fun onHandleIntent(intent: Intent?) {
         intent ?: return
 
-        receiver = intent!!.getParcelableExtra(Constants.RECEIVER)
+        receiver = intent.getParcelableExtra(Constants.RECEIVER)
 
         val geocoder = Geocoder(this, Locale.getDefault())
         var errorMessage = ""

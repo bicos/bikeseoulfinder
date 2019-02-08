@@ -149,7 +149,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
             Utils.showListDialog(activity, "",
                     listOf("위치 상세 보기", if (bikeStationItem.isFavorite()) "즐겨찾기 해제" else "즐겨찾기 저장"),
                     action = {
-                        when(it) {
+                        when (it) {
                             "위치 상세 보기" -> {
                                 val intent = Intent(Intent.ACTION_VIEW)
                                 intent.data = Uri.parse("geo:${bikeStationItem.position.latitude}, ${bikeStationItem.position.longitude}")
@@ -265,8 +265,14 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
             val addressOutput = resultData?.getString(Constants.RESULT_DATA_KEY) ?: ""
             val grpReq = Utils.getFrpSeq(addressOutput)
 
-            val disposable = ApiManager.instance.getRealTimeBikeStations(grpReq)
-                    .map { viewModel.dao.insertAll(it.realtimeList) }
+            ApiManager.instance.getRealTimeBikeStations(grpReq)
+                    .map {
+                        viewModel.dao.insertAll(it.realtimeList)
+                        for (bikeStation in it.realtimeList) {
+                            viewModel.dao.updateParkingBikeCnt(bikeStation.stationLatitude, bikeStation.stationLongitude,
+                                    bikeStation.parkingBikeTotCnt, bikeStation.rackTotCnt)
+                        }
+                    }
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({
                         // do nothing
@@ -279,9 +285,9 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                             Toast.makeText(context, "네트워크가 원활하지 않아 그 전 위치정보를 불러옵니다.", Toast.LENGTH_SHORT).show()
                             updateUiFromVisibleRegion()
                         }
+                    }.let {
+                        compositeDisposable.add(it)
                     }
-
-            compositeDisposable.add(disposable)
         }
     }
 
@@ -296,9 +302,10 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                 bitmapDescriptorFromVector(context, R.drawable.ic_default))
         }
 
-        private fun bitmapDescriptorFromVector(context: Context?, vectorId: Int) : BitmapDescriptor? {
-            val vectorDrawable = ContextCompat.getDrawable(context ?: return null, vectorId) ?: return null
-            vectorDrawable.setBounds(0,0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
+        private fun bitmapDescriptorFromVector(context: Context?, vectorId: Int): BitmapDescriptor? {
+            val vectorDrawable = ContextCompat.getDrawable(context ?: return null, vectorId)
+                    ?: return null
+            vectorDrawable.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
             val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             vectorDrawable.draw(canvas)
