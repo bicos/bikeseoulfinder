@@ -5,6 +5,8 @@
     <string name="invalid_lat_long_used">올바르지 않은 위경도값입니다.</string>
     <string name="no_address_found">주소를 찾을 수 없습니다.</string>
     <string name="address_found">주소를 성공적으로 찾았습니다.</string>
+    <string name="drawer_open">열기</string>
+    <string name="drawer_close">닫기</string>
 
     <string-array name="setting_array">
         <item>즐겨찾기</item>
