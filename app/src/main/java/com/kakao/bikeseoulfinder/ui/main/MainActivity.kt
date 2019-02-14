@@ -9,6 +9,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProviders
 import com.kakao.bikeseoulfinder.R
+import com.kakao.bikeseoulfinder.ui.Constants.Companion.STATION_PATH
 import com.kakao.bikeseoulfinder.ui.favorite.FavoriteStationListActivity
 import kotlinx.android.synthetic.main.main_activity.*
 
@@ -45,6 +46,28 @@ class MainActivity : AppCompatActivity() {
 
         viewModel = ViewModelProviders.of(this, MainViewModelFactory(this))
                 .get(MainViewModel::class.java)
+
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val appLinkData = intent?.data
+
+        if (appLinkData?.lastPathSegment == STATION_PATH) {
+            val lat = appLinkData.getQueryParameter("lat")?.toDoubleOrNull()
+            val lng = appLinkData.getQueryParameter("lng")?.toDoubleOrNull()
+
+            if (lat == null || lng == null)
+                return
+
+            (supportFragmentManager.findFragmentById(R.id.container) as? MainFragment)
+                    ?.moveCamera(lat, lng)
+        }
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {

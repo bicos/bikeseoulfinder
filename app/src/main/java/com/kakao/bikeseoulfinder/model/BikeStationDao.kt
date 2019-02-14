@@ -32,6 +32,9 @@ interface BikeStationDao {
     @Query("SELECT * FROM BikeStations WHERE stationLatitude >= :fromLat AND stationLatitude <= :toLat AND stationLongitude >= :fromLon AND stationLongitude <= :toLon")
     fun getNearByStations(fromLat: Double, toLat: Double, fromLon: Double, toLon: Double): LiveData<List<BikeStation>>
 
+    @Query("SELECT * FROM BikeStations WHERE stationLatitude == :lat AND stationLongitude == :lon")
+    fun getStation(lat: Double, lon: Double): LiveData<BikeStation>
+
     @Query("SELECT * FROM BikeStations WHERE isFavorite")
     fun getFavoriteStations() : LiveData<List<BikeStation>>
 }

@@ -59,9 +59,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     private lateinit var viewModel: MainViewModel
 
-    private lateinit var map: GoogleMap
-
-    private var googleApiClient: GoogleApiClient? = null
+    private var map: GoogleMap? = null
 
     private var clusterManager: ClusterManager<BikeStationItem>? = null
 
@@ -72,7 +70,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
             val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss", Locale.KOREA)
             val currentDate = sdf.format(Date(MainApplication.pref.getUpdateTime()))
             Toast.makeText(context, "데이터가 업데이트 되었습니다. $currentDate", Toast.LENGTH_SHORT).show()
-            getNearByStationAndShowMarkers(map.projection.visibleRegion)
+            getNearByStationAndShowMarkers(map?.projection?.visibleRegion)
         }
     }
 
@@ -85,30 +83,47 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        context?.let {
-            viewModel = ViewModelProviders.of(this, MainViewModelFactory(it)).get(MainViewModel::class.java)
-        }
+
+        viewModel = ViewModelProviders
+                .of(this, MainViewModelFactory(context?: return))
+                .get(MainViewModel::class.java)
+
+        viewModel.updateVisibleRegionEvent
+                .subscribe {
+                    val southwest = it.latLngBounds.southwest
+                    val northeast = it.latLngBounds.northeast
+
+                    viewModel.observeNearByStation(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
+                            .observeOnce(this@MainFragment, Observer {
+                                it?.forEach { bikeStation ->
+                                    val item = BikeStationItem(bikeStation)
+                                    clusterManager?.removeItem(item)
+                                    clusterManager?.addItem(item)
+                                }
+                                clusterManager?.cluster()
+                            })
+                }.disposed(this)
+
+        GoogleApiClient.Builder(activity ?: return)
+                .enableAutoManage(activity ?: return, this)
+                .addConnectionCallbacks(this)
+                .addApi(LocationServices.API)
+                .addApi(Places.GEO_DATA_API)
+                .addApi(Places.PLACE_DETECTION_API)
+                .build().apply {
+                    connect()
+                }
+
         resultReceiver = AddressResultReceiver(Handler())
-        (childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(this)
-
-        activity?.let {
-            googleApiClient = GoogleApiClient.Builder(it)
-                    .enableAutoManage(it /* FragmentActivity */,
-                            this /* OnConnectionFailedListener */)
-                    .addConnectionCallbacks(this)
-                    .addApi(LocationServices.API)
-                    .addApi(Places.GEO_DATA_API)
-                    .addApi(Places.PLACE_DETECTION_API)
-                    .build().apply {
-                        connect()
-                    }
-        }
-
-        btn_search_bike_station.setOnClickListener {
-            getNearByStationAndShowMarkers(map.projection.visibleRegion)
-        }
 
         MainApplication.pref.getPref().registerOnSharedPreferenceChangeListener(listener)
+
+
+        btn_search_bike_station.setOnClickListener {
+            getNearByStationAndShowMarkers(map?.projection?.visibleRegion)
+        }
+
+        (childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(this)
     }
 
     override fun onPause() {
@@ -157,9 +172,11 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
                             }
                             "즐겨찾기 저장" -> {
                                 viewModel.changeFavoriteStateBikeStation(bikeStationItem.getStation(), true)
+                                Toast.makeText(context, "즐겨찾기가 지정되었습니다.", Toast.LENGTH_SHORT).show()
                             }
                             "즐겨찾기 해제" -> {
                                 viewModel.changeFavoriteStateBikeStation(bikeStationItem.getStation(), false)
+                                Toast.makeText(context, "즐겨찾기가 해제되었습니다.", Toast.LENGTH_SHORT).show()
                             }
                         }
                     })
@@ -208,8 +225,8 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
 
     @SuppressLint("MissingPermission")
     private fun setMyLocationUi(enableMyLocation: Boolean) {
-        map.isMyLocationEnabled = enableMyLocation
-        map.uiSettings?.isMyLocationButtonEnabled = enableMyLocation
+        map?.isMyLocationEnabled = enableMyLocation
+        map?.uiSettings?.isMyLocationButtonEnabled = enableMyLocation
     }
 
     @SuppressLint("MissingPermission")
@@ -222,17 +239,19 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         context?.let { context ->
             LocationServices.getFusedLocationProviderClient(context).lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM))
+                    map?.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM))
                 } else {
                     Toast.makeText(context, "현재 위치를 가져올 수 없습니다. 기본 위치로 설정합니다.", Toast.LENGTH_SHORT).show()
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LAT_LON, DEFAULT_ZOOM))
+                    map?.moveCamera(CameraUpdateFactory.newLatLngZoom(DEFAULT_LAT_LON, DEFAULT_ZOOM))
                 }
-                this.getNearByStationAndShowMarkers(map.projection.visibleRegion)
+                this.getNearByStationAndShowMarkers(map?.projection?.visibleRegion)
             }
         }
     }
 
-    private fun getNearByStationAndShowMarkers(region: VisibleRegion) {
+    private fun getNearByStationAndShowMarkers(region: VisibleRegion?) {
+        region?: return
+
         val intent = Intent(context, FetchAddressIntentService::class.java).apply {
             putExtra(Constants.RECEIVER, resultReceiver)
             putExtra(Constants.LOCATION_DATA_EXTRA, region.latLngBounds.center)
@@ -241,20 +260,19 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
     }
 
     private fun updateUiFromVisibleRegion() {
-        val northeast = map.projection.visibleRegion.latLngBounds.northeast
-        val southwest = map.projection.visibleRegion.latLngBounds.southwest
+        if (map == null) return
 
-        viewModel.observeNearByStation(southwest.latitude, northeast.latitude, southwest.longitude, northeast.longitude)
-                .observe(this@MainFragment, Observer {
-                    viewModel.stationList?.removeObservers(this)
+        viewModel.updateVisibleRegion(map!!.projection.visibleRegion)
+    }
 
-                    it?.forEach { bikeStation ->
-                        val item = BikeStationItem(bikeStation)
-                        clusterManager?.removeItem(item)
-                        clusterManager?.addItem(item)
-                    }
-                    clusterManager?.cluster()
-                })
+    fun moveCamera(lat: Double, lng: Double) {
+        viewModel.observeStation(lat, lng).observeOnce(this, Observer {
+            map?.animateCamera(CameraUpdateFactory.newLatLng(LatLng(lat, lng)))
+            val bikeStationItem = BikeStationItem(it)
+            clusterManager?.removeItem(bikeStationItem)
+            clusterManager?.addItem(bikeStationItem)
+            clusterManager?.cluster()
+        })
     }
 
     internal inner class AddressResultReceiver(handler: Handler) : ResultReceiver(handler) {
@@ -266,13 +284,7 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
             val grpReq = Utils.getFrpSeq(addressOutput)
 
             ApiManager.instance.getRealTimeBikeStations(grpReq)
-                    .map {
-                        viewModel.dao.insertAll(it.realtimeList)
-                        for (bikeStation in it.realtimeList) {
-                            viewModel.dao.updateParkingBikeCnt(bikeStation.stationLatitude, bikeStation.stationLongitude,
-                                    bikeStation.parkingBikeTotCnt, bikeStation.rackTotCnt)
-                        }
-                    }
+                    .map { viewModel.updateParkingBikeCountOrInsert(it.realtimeList) }
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({
                         // do nothing
@@ -303,9 +315,12 @@ class MainFragment : Fragment(), OnMapReadyCallback, EasyPermissions.PermissionC
         }
 
         private fun bitmapDescriptorFromVector(context: Context?, vectorId: Int): BitmapDescriptor? {
-            val vectorDrawable = ContextCompat.getDrawable(context ?: return null, vectorId)
+            if (context == null) return null
+
+            val vectorDrawable = ContextCompat.getDrawable(context, vectorId)
                     ?: return null
             vectorDrawable.setBounds(0, 0, vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight)
+
             val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth, vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             vectorDrawable.draw(canvas)

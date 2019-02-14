@@ -4,6 +4,8 @@ import android.R
 import android.app.Activity
 import android.widget.SimpleAdapter
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.*
+import io.reactivex.disposables.Disposable
 
 class Utils {
     companion object {
@@ -53,4 +55,22 @@ class Utils {
                     }.show()
         }
     }
+}
+
+fun Disposable.disposed(lifecycleOwner: LifecycleOwner?) {
+    lifecycleOwner?.lifecycle?.addObserver(object: LifecycleObserver {
+        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        fun dispose() {
+            this@disposed.dispose()
+        }
+    })
+}
+
+fun <T> LiveData<T>.observeOnce(lifecycleOwner: LifecycleOwner, observer: Observer<T>) {
+    observeForever(object : Observer<T> {
+        override fun onChanged(t: T?) {
+            observer.onChanged(t)
+            removeObserver(this)
+        }
+    })
 }
