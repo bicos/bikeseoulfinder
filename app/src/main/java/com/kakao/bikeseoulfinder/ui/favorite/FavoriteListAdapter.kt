@@ -46,7 +46,7 @@ class FavoriteListAdapter : RecyclerView.Adapter<FavoriteListAdapter.FavoriteVie
         fun setData(bikeStation: BikeStation) {
             location = LatLng(bikeStation.stationLatitude, bikeStation.stationLongitude)
             text1.text = bikeStation.stationName
-            text2.text = "${bikeStation.rackTotCnt}대 남음"
+            text2.text = "${bikeStation.parkingBikeTotCnt}대 남음"
         }
 
     }
