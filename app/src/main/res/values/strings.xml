@@ -10,6 +10,7 @@
 
     <string-array name="setting_array">
         <item>즐겨찾기</item>
+        <item>개인정보 처리방침</item>
     </string-array>
 
 </resources>

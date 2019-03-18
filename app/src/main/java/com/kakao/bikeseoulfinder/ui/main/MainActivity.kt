@@ -2,6 +2,7 @@ package com.kakao.bikeseoulfinder.ui.main
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.ArrayAdapter
@@ -37,6 +38,8 @@ class MainActivity : AppCompatActivity() {
         left_drawer.setOnItemClickListener { _, _, position, _ ->
             if (position == 0) {
                 startActivity(Intent(this@MainActivity, FavoriteStationListActivity::class.java))
+            } else if (position == 1) {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://bikeseoulfinder.firebaseapp.com/privacy_policy.html")))
             }
         }
 
